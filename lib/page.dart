@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data'; // Import this for Uint8List
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -34,11 +35,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
 
   Future<void> _fetchPatientDetails() async {
     final url = Uri.parse(
-        'https://bpk-webapp-prd1.bdms.co.th/ApiPhamacySmartLabel/PatientDetailsTest');
+        'https://bpk-webapp-prd1.bdms.co.th/ApiPhamacySmartLabel/PatientDetails');
     final headers = {
       'Content-Type': 'application/json',
-      // Remove the following line because it's not needed for requests made from Flutter
-      // 'Access-Control-Allow-Origin': '*',
     };
     final body = jsonEncode({'emplid': widget.visitId, 'pass': ""});
 
@@ -87,9 +86,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           style: TextStyle(
               fontSize: 25, color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor:
-            const Color(0xFF03A9F4), // Set background color to transparent
-        elevation: 0, // Remove elevation to blend with the gradient
+        backgroundColor: const Color(0xFF03A9F4),
+        elevation: 0,
         actions: [
           IconButton(
             onPressed: () {
@@ -128,16 +126,13 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                           Text('Age : ${patientDetails!['age'] ?? 'N/A'}',
                               style: const TextStyle(fontSize: 16)),
                           Text(
-                              'Episode Date / Number : ${patientDetails!['visit_date'] ?? 'N/A'},${patientDetails!['visit_time'] ?? 'N/A'}[${patientDetails!['en'] ?? 'N/A'}]',
-                              style: const TextStyle(fontSize: 16)),
-                          Text(
-                              'Diagnosis : ${patientDetails!['diagnosis'] ?? 'N/A'}',
+                              'Episode Date / Number : ${patientDetails!['visit_date'] ?? 'N/A'}, ${patientDetails!['visit_time'] ?? 'N/A'} [${patientDetails!['en'] ?? 'N/A'}]',
                               style: const TextStyle(fontSize: 16)),
                           Text(
                               'Allergy : ${patientDetails!['drugaallergy'] ?? 'N/A'}',
                               style: const TextStyle(fontSize: 16)),
                           Text(
-                              'Ward : ${patientDetails!['roombed'] ?? 'N/A'},${patientDetails!['opddoctorname'] ?? 'N/A'}',
+                              'Ward : ${patientDetails!['roombed'] ?? 'N/A'}, ${patientDetails!['opddoctorname'] ?? 'N/A'}',
                               style: const TextStyle(fontSize: 16)),
                           Center(
                             child: IconButton(
@@ -151,12 +146,11 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                             ${patientDetails!['patient_name'] ?? 'N/A'}
                             HN: ${patientDetails!['hn'] ?? 'N/A'}
                             Gender/เพศ: ${patientDetails!['fix_gender_id'] ?? 'N/A'}
-                            D.O.B/วันเกิด: ${patientDetails!['birthdate'] ?? 'N/A'}
+                            Date of birth/วันเกิด: ${patientDetails!['birthdate'] ?? 'N/A'}
                             Age/อายุ: $ageValue
-                            Episode Date / Number/วันที่เข้าพบแพทย์: ${patientDetails!['visit_date'] ?? 'N/A'},${patientDetails!['visit_time'] ?? 'N/A'},${patientDetails!['en'] ?? 'N/A'}
-                            Diagnosis/วินิจฉัย: ${patientDetails!['diagnosis'] ?? 'N/A'}
+                            Episode Date / Number/วันที่เข้าพบแพทย์: ${patientDetails!['visit_date'] ?? 'N/A'}, ${patientDetails!['visit_time'] ?? 'N/A'}, ${patientDetails!['en'] ?? 'N/A'}
                             Allergy/การแพ้: ${patientDetails!['drugaallergy'] ?? 'N/A'}
-                            Ward/ห้อง: ${patientDetails!['roombed'] ?? 'N/A'}${patientDetails!['opddoctorname'] ?? 'N/A'}
+                            Ward/ห้อง: ${patientDetails!['roombed'] ?? 'N/A'}, ${patientDetails!['opddoctorname'] ?? 'N/A'}
                           """;
                                 _speakText(detailsText);
                               },
@@ -183,15 +177,30 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Center(
+                              Align(
+                                alignment: Alignment.centerLeft,
                                 child: ClipRRect(
                                   borderRadius: BorderRadius.circular(5.0),
-                                  child: Image.network(
-                                    medication['imagename'] ?? '',
-                                    width: 150,
-                                    height: 150,
-                                    fit: BoxFit.cover,
-                                  ),
+                                  child: medication['profileimage'] != null &&
+                                          medication['profileimage']!.isNotEmpty
+                                      ? Image.memory(
+                                          base64Decode(
+                                              medication['profileimage']),
+                                          width: 150,
+                                          height: 150,
+                                          fit: BoxFit.cover,
+                                          errorBuilder:
+                                              (context, error, stackTrace) {
+                                            return const Icon(
+                                              Icons.broken_image,
+                                              size: 150,
+                                            );
+                                          },
+                                        )
+                                      : const Icon(
+                                          Icons.image,
+                                          size: 150,
+                                        ),
                                 ),
                               ),
                               const SizedBox(
@@ -214,7 +223,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                                   'Description : ${medication['item_deacription'] ?? 'N/A'}',
                                   style: const TextStyle(fontSize: 16)),
                               Text(
-                                  'Caution : ${medication['item_caution'] ?? 'N/A'}',
+                                  'Caution : ${medication['caution'] ?? 'N/A'}',
                                   style: const TextStyle(fontSize: 16)),
                               Center(
                                 child: IconButton(

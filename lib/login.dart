@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'page.dart'; // Ensure to import your PatientDetailsPage file
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({Key? key}) : super(key: key);
+  const LoginPage({super.key});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -15,7 +15,25 @@ class _LoginPageState extends State<LoginPage> {
   final _navigatorKey = GlobalKey<NavigatorState>();
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final FocusNode _buttonFocusNode = FocusNode();
   bool isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _buttonFocusNode.addListener(() {
+      if (_buttonFocusNode.hasFocus) {
+        _buttonFocusNode.consumeKeyboardToken();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _buttonFocusNode.dispose();
+    super.dispose();
+  }
 
   Future<void> _login() async {
     if (isLoading) return;
@@ -25,13 +43,11 @@ class _LoginPageState extends State<LoginPage> {
     }
 
     setState(() => isLoading = true);
-    final client = http.Client();
-    final url =
-        Uri.parse('https://bpk-webapp-prd1.bdms.co.th/ApiPhamacySmartLabel/PatientVerifyTest');
+    final url = Uri.parse(
+        'https://bpk-webapp-prd1.bdms.co.th/ApiPhamacySmartLabel/PatientVerify');
+    // Uri.parse('http://10.143.10.37/ApiPhamacySmartLabel/PatientDetails');
     final headers = {
       'Content-Type': 'application/json',
-      // Remove the following line because it's not needed for requests made from Flutter
-      // 'Access-Control-Allow-Origin': '*',
     };
     final body = jsonEncode({
       'emplid': _usernameController.text,
@@ -40,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       await Future.delayed(const Duration(seconds: 2));
-      final response = await client.post(url, headers: headers, body: body);
+      final response = await http.post(url, headers: headers, body: body);
       final jsonResponse = jsonDecode(response.body);
 
       if (response.statusCode == 200) {
@@ -64,7 +80,6 @@ class _LoginPageState extends State<LoginPage> {
       _showDialog('Error', 'An error occurred: $e');
     } finally {
       setState(() => isLoading = false);
-      client.close(); // Close the HTTP client after use
     }
   }
 
@@ -132,7 +147,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(color: Colors.black),
                             ),
                             TextSpan(
-                              text: 'เช่น 19950919\n',
+                              text: 'เช่น ปปปป/ดด/วว\n',
                               style: TextStyle(
                                 color: Colors.blue,
                                 fontWeight: FontWeight.bold,
@@ -144,7 +159,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(color: Colors.black),
                             ),
                             TextSpan(
-                              text: 'Ex. 19950919',
+                              text: 'Ex. yyyy/mm/dd',
                               style: TextStyle(
                                 color: Colors.blue,
                                 fontWeight: FontWeight.bold,
@@ -156,6 +171,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
+                      focusNode: _buttonFocusNode,
                       onPressed: isLoading ? null : () => _login(),
                       style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(
