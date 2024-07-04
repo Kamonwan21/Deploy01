@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data'; // Import this for Uint8List
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_tts/flutter_tts.dart';
@@ -27,18 +26,16 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   }
 
   void _configureTts() async {
-    await flutterTts.setLanguage("th-TH");
-    await flutterTts.setPitch(0.5);
-    await flutterTts.setVolume(0.5);
+    await flutterTts.setLanguage('th-TH');
+    await flutterTts.setPitch(1.0);
+    await flutterTts.setVolume(1.0);
     await flutterTts.setSpeechRate(0.8);
   }
 
   Future<void> _fetchPatientDetails() async {
     final url = Uri.parse(
         'https://bpk-webapp-prd1.bdms.co.th/ApiPhamacySmartLabel/PatientDetails');
-    final headers = {
-      'Content-Type': 'application/json',
-    };
+    final headers = {'Content-Type': 'application/json'};
     final body = jsonEncode({'emplid': widget.visitId, 'pass': ""});
 
     try {
@@ -77,13 +74,27 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     await flutterTts.speak(text);
   }
 
+  String getText(String thaiText, String englishText) {
+    if (patientDetails == null ||
+        !patientDetails!.containsKey('base_communication_language_id')) {
+      return englishText; // Default to English if data is incomplete
+    }
+
+    final languageId = patientDetails!['base_communication_language_id'];
+    if (languageId == 'TH') {
+      return thaiText;
+    } else {
+      return englishText;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Home Medication Sheet',
-          style: TextStyle(
+        title: Text(
+          getText('ใบสั่งยากลับบ้าน', 'Home Medication Sheet'),
+          style: const TextStyle(
               fontSize: 25, color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF03A9F4),
@@ -106,152 +117,197 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Profile / ข้อมูลผู้ป่วย',
-                      style:
-                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  Card(
-                    child: ListTile(
-                      title: Text('${patientDetails!['patient_name'] ?? 'N/A'}',
-                          style: const TextStyle(fontSize: 18)),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('HN : ${patientDetails!['hn'] ?? 'N/A'}',
-                              style: const TextStyle(fontSize: 16)),
-                          Text(
-                              'Gender : ${patientDetails!['fix_gender_id'] ?? 'N/A'}',
-                              style: const TextStyle(fontSize: 16)),
-                          Text('DOB : ${patientDetails!['birthdate'] ?? 'N/A'}',
-                              style: const TextStyle(fontSize: 16)),
-                          Text('Age : ${patientDetails!['age'] ?? 'N/A'}',
-                              style: const TextStyle(fontSize: 16)),
-                          Text(
-                              'Episode Date / Number : ${patientDetails!['visit_date'] ?? 'N/A'}, ${patientDetails!['visit_time'] ?? 'N/A'} [${patientDetails!['en'] ?? 'N/A'}]',
-                              style: const TextStyle(fontSize: 16)),
-                          Text(
-                              'Allergy : ${patientDetails!['drugaallergy'] ?? 'N/A'}',
-                              style: const TextStyle(fontSize: 16)),
-                          Text(
-                              'Ward : ${patientDetails!['roombed'] ?? 'N/A'}, ${patientDetails!['opddoctorname'] ?? 'N/A'}',
-                              style: const TextStyle(fontSize: 16)),
-                          Center(
-                            child: IconButton(
-                              icon: const Icon(Icons.volume_up),
-                              onPressed: () {
-                                final String ageValue =
-                                    (patientDetails!['age'] ?? 'N/A')
-                                        .toString()
-                                        .replaceAll(RegExp(r'\D'), '');
-                                final detailsText = """
-                            ${patientDetails!['patient_name'] ?? 'N/A'}
-                            HN: ${patientDetails!['hn'] ?? 'N/A'}
-                            Gender/เพศ: ${patientDetails!['fix_gender_id'] ?? 'N/A'}
-                            Date of birth/วันเกิด: ${patientDetails!['birthdate'] ?? 'N/A'}
-                            Age/อายุ: $ageValue
-                            Episode Date / Number/วันที่เข้าพบแพทย์: ${patientDetails!['visit_date'] ?? 'N/A'}, ${patientDetails!['visit_time'] ?? 'N/A'}, ${patientDetails!['en'] ?? 'N/A'}
-                            Allergy/การแพ้: ${patientDetails!['drugaallergy'] ?? 'N/A'}
-                            Ward/ห้อง: ${patientDetails!['roombed'] ?? 'N/A'}, ${patientDetails!['opddoctorname'] ?? 'N/A'}
-                          """;
-                                _speakText(detailsText);
-                              },
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
+                  _buildPatientProfileSection(),
                   const SizedBox(height: 20),
-                  const Text('Medications / ยา',
-                      style:
-                          TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: medications!.length,
-                    itemBuilder: (context, index) {
-                      final medication = medications![index];
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 10),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Align(
-                                alignment: Alignment.centerLeft,
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(5.0),
-                                  child: medication['profileimage'] != null &&
-                                          medication['profileimage']!.isNotEmpty
-                                      ? Image.memory(
-                                          base64Decode(
-                                              medication['profileimage']),
-                                          width: 150,
-                                          height: 150,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return const Icon(
-                                              Icons.broken_image,
-                                              size: 150,
-                                            );
-                                          },
-                                        )
-                                      : const Icon(
-                                          Icons.image,
-                                          size: 150,
-                                        ),
-                                ),
-                              ),
-                              const SizedBox(
-                                height: 10,
-                              ),
-                              Text('${medication['item_name'] ?? 'N/A'}',
-                                  style: const TextStyle(fontSize: 16)),
-                              Text('${medication['th_name'] ?? 'N/A'}',
-                                  style: const TextStyle(fontSize: 16)),
-                              Text(
-                                  'Instructions : ${medication['instruction_text_line1'] ?? 'N/A'}',
-                                  style: const TextStyle(fontSize: 16)),
-                              Text(
-                                  '${medication['instruction_text_line2'] ?? ''}',
-                                  style: const TextStyle(fontSize: 16)),
-                              Text(
-                                  '${medication['instruction_text_line3'] ?? ''}',
-                                  style: const TextStyle(fontSize: 16)),
-                              Text(
-                                  'Description : ${medication['item_deacription'] ?? 'N/A'}',
-                                  style: const TextStyle(fontSize: 16)),
-                              Text(
-                                  'Caution : ${medication['caution'] ?? 'N/A'}',
-                                  style: const TextStyle(fontSize: 16)),
-                              Center(
-                                child: IconButton(
-                                  icon: const Icon(Icons.volume_up),
-                                  onPressed: () {
-                                    final medicationText = """
-                                    ${medication['item_name'] ?? 'N/A'}
-                                    ${medication['th_name'] ?? 'N/A'}
-                                      Instructions/คำแนะนำ: ${medication['instruction_text_line1'] ?? 'N/A'}
-                                      ${medication['instruction_text_line2'] ?? ''}
-                                      ${medication['instruction_text_line3'] ?? ''}
-                                      Description/คำอธิบาย: ${medication['item_deacription'] ?? 'N/A'}
-                                      Caution/คำเตือน: ${medication['item_caution'] ?? 'N/A'}
-                                    """;
-                                    _speakText(medicationText);
-                                  },
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
+                  _buildMedicationSection(),
                 ],
               ),
             )
           : const Center(child: CircularProgressIndicator()),
+    );
+  }
+
+  Widget _buildPatientProfileSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(getText('ข้อมูลผู้ป่วย', 'Profile'),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        Card(
+          child: ListTile(
+            title: Text(
+                '${patientDetails!['patient_name'] ?? getText('ไม่มีข้อมูล', 'N/A')}',
+                style: const TextStyle(fontSize: 18)),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    '${getText('รหัสโรงพยาบาล', 'HN')} : ${patientDetails!['hn'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16)),
+                Text(
+                    '${getText('เพศ', 'Gender')} : ${patientDetails!['fix_gender_id'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16)),
+                Text(
+                    '${getText('วันเกิด', 'Date of birth')} : ${patientDetails!['birthdate'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16)),
+                Text(
+                    '${getText('อายุ', 'Age')} : ${patientDetails!['age'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16)),
+                Text(
+                    '${getText('วันที่เข้าพบแพทย์ / เลขที่', 'Episode Date / Number')} : ${patientDetails!['visit_date'] ?? 'N/A'} ${patientDetails!['visit_time'] ?? 'N/A'} ${patientDetails!['en'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16)),
+                Text(
+                    '${getText('การแพ้', 'Allergy')} : ${patientDetails!['drugaallergy'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16)),
+                Text(
+                    '${getText('ประเภทผู้ป่วย', 'Patient Type')} : ${patientDetails!['fix_visit_type_id'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16)),
+                if (patientDetails!['fix_visit_type_id'] == 'IPD')
+                  Text(
+                    '${getText('ห้อง', 'Ward')} : ${patientDetails!['roombed'] ?? 'N/A'}\n${getText('ชื่อแพทย์', 'Doctor Name')} : ${patientDetails!['opddoctorname'] ?? 'N/A'}',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                if (patientDetails!['fix_visit_type_id'] == 'OPD')
+                  Text(
+                      '${getText('ชื่อแพทย์', 'Doctor Name')} : ${patientDetails!['opddoctorname'] ?? 'N/A'}',
+                      style: const TextStyle(fontSize: 16)),
+                Center(
+                  child: IconButton(
+                    icon: const Icon(Icons.volume_up),
+                    onPressed: () {
+                      _speakPatientDetails();
+                    },
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatVisitDateTime() {
+    String visitDate = patientDetails!['visit_date'] ?? 'N/A';
+    String visitTime = patientDetails!['visit_time'] ?? 'N/A';
+    String en = patientDetails!['en'] ?? 'N/A';
+
+    return '$visitDate, $visitTime [$en]';
+  }
+
+  void _speakPatientDetails() {
+    final detailsText = """
+        ${patientDetails!['patient_name'] ?? getText('ไม่มีข้อมูล', 'N/A')}
+        ${getText('รหัสโรงพยาบาล', 'HN')}: ${patientDetails!['hn'] ?? 'N/A'}
+        ${getText('เพศ', 'Gender')}: ${patientDetails!['fix_gender_id'] ?? 'N/A'}
+        ${getText('วันเกิด', 'Date of birth')}: ${patientDetails!['birthdate'] ?? 'N/A'}
+        ${getText('อายุ', 'Age')}: ${patientDetails!['age'] ?? 'N/A'}
+        ${getText('วันที่เข้าพบแพทย์ / เลขที่', 'Episode Date / Number')}: ${_formatVisitDateTime()}
+        ${getText('การแพ้', 'Allergy')}: ${patientDetails!['drugaallergy'] ?? 'N/A'}
+        ${getText('ประเภทผู้ป่วย', 'Patient Type')}${patientDetails!['fix_visit_type_id'] ?? 'N/A'} 
+        ${getText('ห้อง', 'Ward')}${patientDetails!['roombed'] ?? 'N/A'} 
+        ${getText('ชื่อแพทย์', 'Doctor Name')}${patientDetails!['opddoctorname'] ?? 'N/A'}
+      """;
+    _speakText(detailsText);
+  }
+
+  Widget _buildMedicationSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(getText('ยา', 'Medications'),
+            style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: medications!.length,
+          itemBuilder: (context, index) {
+            final medication = medications![index];
+            return Card(
+              margin: const EdgeInsets.symmetric(vertical: 10),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildMedicationImage(medication['profileimage']),
+                    const SizedBox(height: 10),
+                    _buildMedicationDetails(medication),
+                    Center(
+                      child: IconButton(
+                        icon: const Icon(Icons.volume_up),
+                        onPressed: () {
+                          final medicationText = """
+                          ${medication['item_name'] ?? getText('ไม่มีข้อมูล', 'N/A')}
+                          ${medication['th_name'] ?? getText('ไม่มีข้อมูล', 'N/A')}
+                            ${getText('คำแนะนำ', 'Instructions')}: ${medication['instruction_text_line1'] ?? 'N/A'}
+                            ${medication['instruction_text_line2'] ?? ''}
+                            ${medication['instruction_text_line3'] ?? ''}
+                            ${getText('คำอธิบาย', 'Description')}: ${medication['item_deacription'] ?? 'N/A'}
+                            ${getText('คำเตือน', 'Caution')}: ${medication['item_caution'] ?? 'N/A'}
+                          """;
+                          _speakText(medicationText);
+                        },
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMedicationImage(String? base64Image) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(5.0),
+        child: base64Image != null && base64Image.isNotEmpty
+            ? Image.memory(
+                base64Decode(base64Image),
+                width: 150,
+                height: 150,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Icon(
+                    Icons.broken_image,
+                    size: 150,
+                  );
+                },
+              )
+            : const Icon(
+                Icons.image,
+                size: 150,
+              ),
+      ),
+    );
+  }
+
+  Widget _buildMedicationDetails(Map<String, dynamic> medication) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('${medication['item_name'] ?? getText('ไม่มีข้อมูล', 'N/A')}',
+            style: const TextStyle(fontSize: 16)),
+        Text('${medication['th_name'] ?? getText('ไม่มีข้อมูล', 'N/A')}',
+            style: const TextStyle(fontSize: 16)),
+        Text(
+            '${getText('คำแนะนำ', 'Instructions')} : ${medication['instruction_text_line1'] ?? 'N/A'}',
+            style: const TextStyle(fontSize: 16)),
+        Text('${medication['instruction_text_line2'] ?? ''}',
+            style: const TextStyle(fontSize: 16)),
+        Text('${medication['instruction_text_line3'] ?? ''}',
+            style: const TextStyle(fontSize: 16)),
+        Text(
+            '${getText('คำอธิบาย', 'Description')} : ${medication['item_deacription'] ?? 'N/A'}',
+            style: const TextStyle(fontSize: 16)),
+        Text(
+            '${getText('คำเตือน', 'Caution')} : ${medication['item_caution'] ?? 'N/A'}',
+            style: const TextStyle(fontSize: 16)),
+      ],
     );
   }
 }

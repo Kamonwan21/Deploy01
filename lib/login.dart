@@ -17,6 +17,7 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final FocusNode _buttonFocusNode = FocusNode();
   bool isLoading = false;
+  bool _isObscure = true;
 
   @override
   void initState() {
@@ -129,12 +130,28 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: _passwordController,
-                      obscureText: true,
-                      decoration: const InputDecoration(
-                          hintText: "กรุณากรอกหมายเลข 4 ตัวท้าย",
-                          labelText: 'Password'),
+                      obscureText:
+                          _isObscure, // ใช้ _isObscure เพื่อควบคุมการแสดงของรหัสผ่าน
+                      decoration: InputDecoration(
+                        hintText: "กรุณากรอกหมายเลข 4 ตัวท้าย",
+                        labelText: 'Password',
+                        suffixIcon: IconButton(
+                          onPressed: () {
+                            setState(() {
+                              _isObscure =
+                                  !_isObscure; // เปลี่ยนสถานะรหัสผ่าน (แสดงหรือซ่อน)
+                            });
+                          },
+                          icon: Icon(
+                            _isObscure
+                                ? Icons.remove_red_eye_outlined
+                                : Icons.remove_red_eye_rounded,
+                            size: 20,
+                          ),
+                        ),
+                      ),
                       validator: (value) =>
-                          value!.isEmpty ? 'Please enter your 4 Ids' : null,
+                          value!.isEmpty ? 'กรุณากรอกหมายเลข 4 ตัวท้าย' : null,
                     ),
                     Align(
                       alignment: Alignment.centerLeft,
@@ -147,7 +164,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(color: Colors.black),
                             ),
                             TextSpan(
-                              text: 'เช่น ปปปป/ดด/วว\n',
+                              text: 'เช่น ปปปปดดวว\n',
                               style: TextStyle(
                                 color: Colors.blue,
                                 fontWeight: FontWeight.bold,
@@ -159,7 +176,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(color: Colors.black),
                             ),
                             TextSpan(
-                              text: 'Ex. yyyy/mm/dd',
+                              text: 'Ex. yyyymmdd',
                               style: TextStyle(
                                 color: Colors.blue,
                                 fontWeight: FontWeight.bold,
